@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Wealth OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #chat-window {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .chat-hidden {
+            transform: translateY(120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col h-full shadow-2xl z-20">
+        <div class="p-6 flex items-center gap-3 border-b border-slate-700">
+            <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold">
+                <i class="fa-solid fa-leaf"></i>
+            </div>
+            <h1 class="text-xl font-bold text-white tracking-wide">Wealth OS</h1>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1 px-3" id="nav-menu">
+                <!-- Populated by JS -->
+            </ul>
+        </nav>
+        <div class="p-4 border-t border-slate-700 text-xs text-slate-500 text-center">
+            Family Finance v1.0
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full relative overflow-hidden">
+        
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm z-50">
+            <h2 id="page-title" class="text-xl font-semibold text-slate-800">Dashboard</h2>
+            
+            <div class="flex items-center gap-4">
+                <!-- Base Currency -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-slate-600">Base:</span>
+                    <select id="base-currency" class="bg-slate-50 border border-slate-300 text-sm rounded-md py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-800">
+                        <option value="SAR">SAR</option>
+                        <option value="INR">INR</option>
+                        <option value="USD">USD</option>
+                    </select>
+                </div>
+
+                <!-- AI Status Indicator -->
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200 shadow-sm pointer-events-none">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                    <span class="text-xs font-bold uppercase tracking-wider">AI Active</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <div id="app-content" class="flex-1 overflow-y-auto p-6 scroll-smooth">
+            <!-- Content rendered here -->
+        </div>
+
+    </main>
+
+    <!-- AI Chatbot Widget -->
+    <div id="chat-widget" class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        <!-- Chat Window -->
+        <div id="chat-window" class="chat-hidden w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 mb-4 overflow-hidden flex flex-col h-[500px]">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-robot text-lg"></i>
+                    <h3 class="font-semibold">Wealth Advisor</h3>
+                </div>
+                <button id="btn-close-chat" class="text-blue-100 hover:text-white"><i class="fa-solid fa-times"></i></button>
+            </div>
+            
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 text-sm">
+                <div class="flex gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-700">
+                        Hello! I'm your family finance AI. I have access to your accounts, budgets, and investments. How can I help you strategize today? You can also upload documents here for me to analyze.
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 bg-white border-t border-slate-200">
+                <!-- Document Upload Area inside Chat -->
+                <div class="flex items-center gap-2 mb-2 px-2">
+                    <input type="file" id="chat-doc-upload" class="hidden" accept=".csv,.txt,.pdf,image/*">
+                    <label for="chat-doc-upload" class="cursor-pointer text-xs flex items-center gap-1 text-slate-500 hover:text-blue-600 transition-colors">
+                        <i class="fa-solid fa-paperclip"></i> Upload Statement/Receipt to Parse
+                    </label>
+                    <span id="upload-status" class="text-xs text-blue-600 font-medium hidden flex items-center gap-1">
+                        <div class="loader" style="width: 12px; height: 12px; border-width: 2px;"></div> Analyzing...
+                    </span>
+                </div>
+                
+                <form id="chat-form" class="flex gap-2">
+                    <input type="text" id="chat-input" placeholder="Ask about your finances..." 
+                           class="flex-1 bg-slate-100 border-none rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <button type="submit" class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Floating Button -->
+        <button id="btn-toggle-chat" class="w-14 h-14 bg-slate-900 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center text-2xl relative">
+            <i class="fa-solid fa-sparkles"></i>
+            <span class="absolute top-0 right-0 w-3.5 h-3.5 bg-blue-500 border-2 border-white rounded-full"></span>
+        </button>
+    </div>
+
+    <!-- AI Insight Modal -->
+    <div id="ai-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 transform scale-95 transition-transform duration-300 p-8 relative flex flex-col max-h-[85vh]">
+            <button id="btn-close-modal" class="absolute top-5 right-5 text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-times pointer-events-none"></i>
+            </button>
+            <div class="flex items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl shadow-md">
+                    <i class="fa-solid fa-sparkles"></i>
+                </div>
+                <div>
+                    <h3 id="ai-modal-title" class="text-2xl font-bold text-slate-800 tracking-tight">AI Insight</h3>
+                    <p class="text-sm text-slate-500">Powered by Gemini</p>
+                </div>
+            </div>
+            <div id="ai-modal-content" class="text-slate-700 overflow-y-auto flex-1 pr-2 space-y-4 whitespace-pre-wrap text-[15px] leading-relaxed custom-scrollbar">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // --- 1. STATE & DATA ---
+        
+        const initialState = {
+            apiKey: "",
+            apiConnected: false,
+            baseCurrency: "SAR",
+            fxRates: { SAR: 1, INR: 22.5, USD: 0.26, EUR: 0.24, GBP: 0.20 }, // Mock daily rates
+            categories: ["Housing", "Food", "Transport", "Utilities", "Insurance", "Healthcare", "Savings", "Entertainment", "Shopping"],
+            
+            accounts: [
+                { id: 1, name: "Main Checking (Al Rajhi)", type: "bank", currency: "SAR", balance: 15400 },
+                { id: 2, name: "Emergency Fund (SBI)", type: "bank", currency: "INR", balance: 500000 },
+                { id: 3, name: "Visa Credit", type: "credit_card", currency: "SAR", balance: -2100 },
+                { id: 4, name: "Hardware Wallet", type: "crypto", currency: "USD", balance: 4500 }
+            ],
+            
+            transactions: [
+                { id: 1, date: "2026-06-25", description: "Lulu Hypermarket", amount: -450, currency: "SAR", category: "Food", type: "expense", accountId: 1 },
+                { id: 2, date: "2026-06-24", description: "Salary Deposit", amount: 25000, currency: "SAR", category: "Income", type: "income", accountId: 1 },
+                { id: 3, date: "2026-06-22", description: "House Rent", amount: -4000, currency: "SAR", category: "Housing", type: "expense", accountId: 1 },
+                { id: 4, date: "2026-06-20", description: "Netflix", amount: -45, currency: "SAR", category: "Entertainment", type: "expense", accountId: 3 },
+                { id: 5, date: "2026-06-15", description: "SIP Investment", amount: -10000, currency: "INR", category: "Savings", type: "transfer", accountId: 2 }
+            ],
+
+            investments: [
+                { id: 1, name: "Apple Inc (AAPL)", type: "stock", qty: 10, buyPrice: 150, currentPrice: 185, currency: "USD" },
+                { id: 2, name: "HDFC Top 100", type: "mutual_fund", qty: 500, buyPrice: 450, currentPrice: 620, currency: "INR" },
+                { id: 3, name: "Bitcoin (BTC)", type: "crypto", qty: 0.15, buyPrice: 40000, currentPrice: 65000, currency: "USD" }
+            ],
+
+            loans: [
+                { id: 1, name: "Home Loan (SBI)", type: "home", outstanding: 4500000, currency: "INR", emi: 45000, interestRate: 8.5 },
+                { id: 2, name: "Car Loan", type: "personal", outstanding: 60000, currency: "SAR", emi: 1500, interestRate: 4.2 }
+            ],
+
+            insurance: [
+                { id: 1, name: "Family Health (Bupa)", type: "health", premium: 8500, currency: "SAR", renewalDate: "2026-12-01" },
+                { id: 2, name: "Term Life (LIC)", type: "term", premium: 12000, currency: "INR", renewalDate: "2026-08-15" }
+            ],
+
+            assets: [
+                { id: 1, name: "Apartment in Bangalore", type: "real_estate", manualValue: 8500000, currency: "INR" },
+                { id: 2, name: "Gold Jewelry (200g)", type: "gold", manualValue: 55000, currency: "SAR" } 
+            ],
+
+            alerts: [
+                { id: 1, type: "warning", message: "Visa Credit EMI due in 3 days." },
+                { id: 2, type: "info", message: "Term Life Insurance renewal coming up in August." }
+            ]
+        };
+
+        let state = JSON.parse(JSON.stringify(initialState));
+        let currentPage = 'dashboard';
+
+        // --- 2. UTILITY & CORE FUNCTIONS ---
+
+        function convertCurrency(amount, fromCurrency) {
+            if (fromCurrency === state.baseCurrency) return amount;
+            const fromRate = state.fxRates[fromCurrency] || 1;
+            const targetRate = state.fxRates[state.baseCurrency] || 1;
+            const amountInHub = amount / fromRate;
+            return amountInHub * targetRate;
+        }
+
+        function formatMoney(amount, currency = state.baseCurrency, showSymbol = true) {
+            const formatter = new Intl.NumberFormat('en-US', {
+                style: showSymbol ? 'currency' : 'decimal',
+                currency: currency,
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+            return formatter.format(amount);
+        }
+
+        function getNetWorth() {
+            let assetsTotal = 0; let liabilitiesTotal = 0;
+            state.accounts.forEach(acc => {
+                const val = convertCurrency(acc.balance, acc.currency);
+                if (val >= 0) assetsTotal += val; else liabilitiesTotal += Math.abs(val);
+            });
+            state.investments.forEach(inv => { assetsTotal += convertCurrency(inv.qty * inv.currentPrice, inv.currency); });
+            state.assets.forEach(asset => { assetsTotal += convertCurrency(asset.manualValue, asset.currency); });
+            state.loans.forEach(loan => { liabilitiesTotal += convertCurrency(loan.outstanding, loan.currency); });
+            return { assets: assetsTotal, liabilities: liabilitiesTotal, net: assetsTotal - liabilitiesTotal };
+        }
+
+        function getCashFlow() {
+            let income = 0; let expense = 0;
+            state.transactions.forEach(tx => {
+                const val = convertCurrency(tx.amount, tx.currency);
+                if (tx.type === 'income') income += val;
+                if (tx.type === 'expense') expense += Math.abs(val);
+            });
+            return { income, expense, savings: income - expense };
+        }
+
+        function getInvestmentStats() {
+            let totalInvested = 0; let currentValue = 0;
+            state.investments.forEach(inv => {
+                totalInvested += convertCurrency(inv.qty * inv.buyPrice, inv.currency);
+                currentValue += convertCurrency(inv.qty * inv.currentPrice, inv.currency);
+            });
+            const pl = currentValue - totalInvested;
+            const plPercent = totalInvested > 0 ? (pl / totalInvested) * 100 : 0;
+            return { totalInvested, currentValue, pl, plPercent };
+        }
+
+        // --- 3. UI RENDERING ---
+
+        const navItems = [
+            { id: 'dashboard', icon: 'fa-solid fa-chart-pie', label: 'Dashboard' },
+            { id: 'accounts', icon: 'fa-solid fa-building-columns', label: 'Accounts' },
+            { id: 'transactions', icon: 'fa-solid fa-list-ol', label: 'Transactions' },
+            { id: 'budgets', icon: 'fa-solid fa-chart-line', label: 'Budgets (50/30/20)' },
+            { id: 'investments', icon: 'fa-solid fa-arrow-trend-up', label: 'Investments' },
+            { id: 'loans', icon: 'fa-solid fa-hand-holding-dollar', label: 'Loans & EMI' },
+            { id: 'insurance', icon: 'fa-solid fa-shield-heart', label: 'Insurance' },
+            { id: 'assets', icon: 'fa-solid fa-gem', label: 'Real Estate & Gold' },
+            { id: 'settings', icon: 'fa-solid fa-gear', label: 'Settings' }
+        ];
+
+        function renderNav() {
+            const navEl = document.getElementById('nav-menu');
+            navEl.innerHTML = navItems.map(item => `
+                <li>
+                    <button data-navigate="${item.id}" 
+                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${currentPage === item.id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}">
+                        <i class="${item.icon} w-5 text-center pointer-events-none"></i>
+                        <span class="font-medium pointer-events-none">${item.label}</span>
+                    </button>
+                </li>
+            `).join('');
+            document.getElementById('page-title').innerText = navItems.find(i => i.id === currentPage)?.label || 'Dashboard';
+        }
+
+        function navigateTo(pageId) {
+            currentPage = pageId;
+            renderNav();
+            renderContent();
+        }
+
+        function renderContent() {
+            const contentEl = document.getElementById('app-content');
+            contentEl.innerHTML = ''; 
+
+            switch (currentPage) {
+                case 'dashboard': contentEl.innerHTML = generateDashboardHTML(); break;
+                case 'accounts': contentEl.innerHTML = generateAccountsHTML(); break;
+                case 'transactions': contentEl.innerHTML = generateTransactionsHTML(); break;
+                case 'budgets': contentEl.innerHTML = generateBudgetsHTML(); break;
+                case 'investments': contentEl.innerHTML = generateInvestmentsHTML(); break;
+                case 'loans': contentEl.innerHTML = generateLoansHTML(); break;
+                case 'insurance': contentEl.innerHTML = generateInsuranceHTML(); break;
+                case 'assets': contentEl.innerHTML = generateAssetsHTML(); break;
+                case 'settings': contentEl.innerHTML = generateSettingsHTML(); break;
+            }
+        }
+
+        // --- View Generators ---
+
+        function generateDashboardHTML() {
+            const nw = getNetWorth();
+            const cf = getCashFlow();
+            const inv = getInvestmentStats();
+
+            let alertsHtml = state.alerts.map(a => `
+                <div class="p-3 rounded-lg flex items-start gap-3 ${a.type === 'warning' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-blue-50 text-blue-800 border border-blue-200'}">
+                    <i class="fa-solid ${a.type === 'warning' ? 'fa-triangle-exclamation text-amber-500' : 'fa-circle-info text-blue-500'} mt-0.5"></i>
+                    <p class="text-sm">${a.message}</p>
+                </div>
+            `).join('');
+
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-slate-500 text-sm font-medium mb-1">Total Net Worth</h3>
+                            <div class="text-3xl font-bold text-slate-800">${formatMoney(nw.net)}</div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between text-sm">
+                            <div><span class="text-slate-400">Assets:</span> <span class="text-emerald-600 font-medium">${formatMoney(nw.assets, state.baseCurrency, false)}</span></div>
+                            <div><span class="text-slate-400">Liab:</span> <span class="text-red-500 font-medium">${formatMoney(nw.liabilities, state.baseCurrency, false)}</span></div>
+                        </div>
+                        <button id="btn-ai-briefing" class="w-full mt-4 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-sparkles text-indigo-500 pointer-events-none"></i> ✨ Get AI Financial Briefing
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-slate-500 text-sm font-medium mb-1">Monthly Cash Flow</h3>
+                            <div class="text-3xl font-bold ${cf.savings >= 0 ? 'text-emerald-600' : 'text-red-500'}">${cf.savings >= 0 ? '+' : ''}${formatMoney(cf.savings)}</div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between text-sm">
+                            <div><span class="text-slate-400">In:</span> <span class="text-emerald-600 font-medium">${formatMoney(cf.income, state.baseCurrency, false)}</span></div>
+                            <div><span class="text-slate-400">Out:</span> <span class="text-red-500 font-medium">${formatMoney(cf.expense, state.baseCurrency, false)}</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-slate-500 text-sm font-medium mb-1">Investment Portfolio</h3>
+                            <div class="text-3xl font-bold text-slate-800">${formatMoney(inv.currentValue)}</div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-sm">
+                            <span class="text-slate-400">Unrealized P&L:</span> 
+                            <span class="font-bold px-2 py-1 rounded ${inv.pl >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">
+                                ${inv.pl >= 0 ? '+' : ''}${formatMoney(inv.pl)} (${inv.plPercent.toFixed(1)}%)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold text-slate-800">Recent Activity</h3>
+                            <button data-navigate="transactions" class="text-sm text-blue-600 hover:underline">View All</button>
+                        </div>
+                        <div class="space-y-3">
+                            ${state.transactions.slice(0, 5).map(tx => `
+                                <div class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${tx.type==='income'?'bg-emerald-100 text-emerald-600': tx.type==='transfer'?'bg-blue-100 text-blue-600':'bg-red-100 text-red-600'}">
+                                            <i class="fa-solid ${tx.type==='income'?'fa-arrow-down': tx.type==='transfer'?'fa-exchange-alt':'fa-arrow-up'}"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-slate-800">${tx.description}</p>
+                                            <p class="text-xs text-slate-400">${tx.date} • ${tx.category}</p>
+                                        </div>
+                                    </div>
+                                    <div class="font-semibold ${tx.type==='income'?'text-emerald-600':'text-slate-800'}">
+                                        ${formatMoney(tx.amount, tx.currency)}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                        <h3 class="font-semibold text-slate-800 mb-4">Active Alerts</h3>
+                        <div class="space-y-3">
+                            ${alertsHtml || '<p class="text-sm text-slate-400 text-center py-4">No active alerts.</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateAccountsHTML() {
+            return `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-semibold text-slate-800">Linked Accounts & Wallets</h3>
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"><i class="fa-solid fa-plus mr-2 pointer-events-none"></i>Add Account</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500">
+                                <tr>
+                                    <th class="px-6 py-3 font-medium">Account Name</th>
+                                    <th class="px-6 py-3 font-medium">Type</th>
+                                    <th class="px-6 py-3 font-medium text-right">Native Balance</th>
+                                    <th class="px-6 py-3 font-medium text-right">Value (${state.baseCurrency})</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${state.accounts.map(acc => {
+                                    const baseVal = convertCurrency(acc.balance, acc.currency);
+                                    return `
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="px-6 py-4 font-medium text-slate-800 flex items-center gap-3">
+                                            <i class="fa-solid ${acc.type === 'bank' ? 'fa-building-columns text-blue-500' : acc.type === 'credit_card' ? 'fa-credit-card text-purple-500' : 'fa-bitcoin text-amber-500'}"></i>
+                                            ${acc.name}
+                                        </td>
+                                        <td class="px-6 py-4 text-slate-500 capitalize">${acc.type.replace('_', ' ')}</td>
+                                        <td class="px-6 py-4 text-right ${acc.balance < 0 ? 'text-red-500' : 'text-slate-800'}">${formatMoney(acc.balance, acc.currency)}</td>
+                                        <td class="px-6 py-4 text-right font-semibold text-slate-800">${formatMoney(baseVal)}</td>
+                                    </tr>
+                                `}).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateTransactionsHTML() {
+            return `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col h-full">
+                    <div class="p-6 border-b border-slate-100 flex flex-wrap gap-4 justify-between items-center">
+                        <div class="flex gap-2">
+                            <input type="text" placeholder="Search transactions..." class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="flex gap-3 items-center">
+                            <button id="btn-ai-spending" class="bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-sparkles pointer-events-none"></i> ✨ Spending Analysis
+                            </button>
+                            <button class="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-plus mr-2 pointer-events-none"></i>Manual Entry</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 sticky top-0">
+                                <tr>
+                                    <th class="px-6 py-3 font-medium">Date</th>
+                                    <th class="px-6 py-3 font-medium">Description</th>
+                                    <th class="px-6 py-3 font-medium">Category</th>
+                                    <th class="px-6 py-3 font-medium">Account</th>
+                                    <th class="px-6 py-3 font-medium text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${state.transactions.map(tx => {
+                                    const acc = state.accounts.find(a => a.id === tx.accountId);
+                                    return `
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="px-6 py-4 text-slate-500">${tx.date}</td>
+                                        <td class="px-6 py-4 font-medium text-slate-800">${tx.description}</td>
+                                        <td class="px-6 py-4"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs">${tx.category}</span></td>
+                                        <td class="px-6 py-4 text-slate-500">${acc ? acc.name : 'Unknown'}</td>
+                                        <td class="px-6 py-4 text-right font-semibold ${tx.type==='income'?'text-emerald-600':'text-slate-800'}">${formatMoney(tx.amount, tx.currency)}</td>
+                                    </tr>
+                                `}).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateBudgetsHTML() {
+            let income = 0; let needs = 0; let wants = 0; let savings = 0;
+            state.transactions.forEach(tx => {
+                const val = Math.abs(convertCurrency(tx.amount, tx.currency));
+                if (tx.type === 'income') income += val;
+                else if (['Housing', 'Utilities', 'Healthcare', 'Food', 'Insurance'].includes(tx.category)) needs += val;
+                else if (['Entertainment', 'Shopping', 'Transport'].includes(tx.category)) wants += val;
+                else if (tx.category === 'Savings' || tx.type === 'transfer') savings += val;
+            });
+
+            income = income || 1; 
+            const needsPct = (needs / income) * 100;
+            const wantsPct = (wants / income) * 100;
+            const savingsPct = (savings / income) * 100;
+
+            return `
+                <div class="max-w-4xl mx-auto">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 mb-6 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-6">
+                            <button id="btn-ai-budget" class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-sparkles pointer-events-none"></i> ✨ AI Budget Optimizer
+                            </button>
+                        </div>
+                        <div class="text-left mb-8 max-w-sm">
+                            <h2 class="text-2xl font-bold text-slate-800">50/30/20 Rule Analysis</h2>
+                            <p class="text-slate-500 mt-2">Based on your recent transaction classification</p>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <!-- Needs -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <div>
+                                        <h4 class="font-semibold text-slate-800 flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div> Needs (Target: 50%)</h4>
+                                        <p class="text-xs text-slate-500">Housing, Groceries, Utilities, Health</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-lg">${formatMoney(needs)}</div>
+                                        <div class="text-sm ${needsPct > 50 ? 'text-red-500' : 'text-emerald-500'}">${needsPct.toFixed(1)}%</div>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-3">
+                                    <div class="bg-blue-500 h-3 rounded-full" style="width: ${Math.min(needsPct, 100)}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Wants -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <div>
+                                        <h4 class="font-semibold text-slate-800 flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-amber-400"></div> Wants (Target: 30%)</h4>
+                                        <p class="text-xs text-slate-500">Dining, Entertainment, Shopping</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-lg">${formatMoney(wants)}</div>
+                                        <div class="text-sm ${wantsPct > 30 ? 'text-red-500' : 'text-emerald-500'}">${wantsPct.toFixed(1)}%</div>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-3">
+                                    <div class="bg-amber-400 h-3 rounded-full" style="width: ${Math.min(wantsPct, 100)}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Savings -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <div>
+                                        <h4 class="font-semibold text-slate-800 flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-emerald-500"></div> Savings/Investments (Target: 20%)</h4>
+                                        <p class="text-xs text-slate-500">Investments, Debt Payoff, Emergency</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-lg">${formatMoney(savings)}</div>
+                                        <div class="text-sm ${savingsPct < 20 ? 'text-red-500' : 'text-emerald-500'}">${savingsPct.toFixed(1)}%</div>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-3">
+                                    <div class="bg-emerald-500 h-3 rounded-full" style="width: ${Math.min(savingsPct, 100)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateInvestmentsHTML() {
+            const stats = getInvestmentStats();
+            return `
+                <div class="flex justify-between items-end mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 mr-6">
+                        <div class="bg-slate-900 text-white rounded-2xl p-6 shadow-md">
+                            <h3 class="text-slate-400 text-sm font-medium mb-1">Total Portfolio Value</h3>
+                            <div class="text-3xl font-bold">${formatMoney(stats.currentValue)}</div>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                            <h3 class="text-slate-500 text-sm font-medium mb-1">Total Invested</h3>
+                            <div class="text-2xl font-bold text-slate-800">${formatMoney(stats.totalInvested)}</div>
+                        </div>
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                            <h3 class="text-slate-500 text-sm font-medium mb-1">Total P&L</h3>
+                            <div class="text-2xl font-bold ${stats.pl >= 0 ? 'text-emerald-600' : 'text-red-500'}">
+                                ${stats.pl >= 0 ? '+' : ''}${formatMoney(stats.pl)} 
+                                <span class="text-sm ml-1 px-2 py-0.5 rounded-full ${stats.pl >= 0 ? 'bg-emerald-100' : 'bg-red-100'}">${stats.plPercent.toFixed(2)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btn-ai-portfolio" class="h-[104px] px-6 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl font-medium shadow-md hover:shadow-lg hover:scale-105 transition-all flex flex-col items-center justify-center gap-2">
+                        <i class="fa-solid fa-sparkles text-2xl mb-1 text-blue-200 pointer-events-none"></i>
+                        <span class="pointer-events-none">✨ AI Portfolio<br>Review</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Asset</th>
+                                <th class="px-6 py-3 font-medium">Qty</th>
+                                <th class="px-6 py-3 font-medium">Buy Price</th>
+                                <th class="px-6 py-3 font-medium">CMP</th>
+                                <th class="px-6 py-3 font-medium text-right">Current Value (${state.baseCurrency})</th>
+                                <th class="px-6 py-3 font-medium text-right">P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${state.investments.map(inv => {
+                                const invested = inv.qty * inv.buyPrice;
+                                const current = inv.qty * inv.currentPrice;
+                                const pl = current - invested;
+                                const plPct = (pl / invested) * 100;
+                                const currentBase = convertCurrency(current, inv.currency);
+                                const plBase = convertCurrency(pl, inv.currency);
+
+                                return `
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium text-slate-800">${inv.name}</div>
+                                        <div class="text-xs text-slate-400 uppercase">${inv.type.replace('_', ' ')} • ${inv.currency}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-slate-700">${inv.qty}</td>
+                                    <td class="px-6 py-4 text-slate-700">${formatMoney(inv.buyPrice, inv.currency, false)}</td>
+                                    <td class="px-6 py-4 font-medium text-slate-800">${formatMoney(inv.currentPrice, inv.currency, false)}</td>
+                                    <td class="px-6 py-4 text-right font-semibold text-slate-800">${formatMoney(currentBase)}</td>
+                                    <td class="px-6 py-4 text-right font-medium ${pl >= 0 ? 'text-emerald-600' : 'text-red-500'}">
+                                        ${pl >= 0 ? '+' : ''}${formatMoney(plBase)} <br>
+                                        <span class="text-xs">${plPct.toFixed(2)}%</span>
+                                    </td>
+                                </tr>
+                            `}).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function generateLoansHTML() {
+            return `
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Active Liabilities</h2>
+                        <p class="text-slate-500 text-sm">Track your loans and EMIs</p>
+                    </div>
+                    <button id="btn-ai-debt" class="bg-gradient-to-r from-rose-500 to-orange-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-sparkles pointer-events-none"></i> ✨ AI Payoff Strategy
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${state.loans.map(loan => `
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-800">${loan.name}</h3>
+                                    <p class="text-sm text-slate-500 capitalize">${loan.type} Loan</p>
+                                </div>
+                                <div class="bg-red-50 text-red-600 font-semibold px-3 py-1 rounded-lg border border-red-100">
+                                    ${loan.interestRate}% APR
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-xs text-slate-400 mb-1">Outstanding Principal</p>
+                                    <p class="text-2xl font-bold text-slate-800">${formatMoney(loan.outstanding, loan.currency)}</p>
+                                    ${loan.currency !== state.baseCurrency ? `<p class="text-xs text-slate-400">≈ ${formatMoney(convertCurrency(loan.outstanding, loan.currency))}</p>` : ''}
+                                </div>
+                                <div class="pt-4 border-t border-slate-100">
+                                    <p class="text-xs text-slate-400 mb-1">Monthly EMI</p>
+                                    <p class="text-lg font-semibold text-slate-700">${formatMoney(loan.emi, loan.currency)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function generateInsuranceHTML() {
+            return `
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Insurance Policies</h2>
+                        <p class="text-slate-500 text-sm">Manage your family's safety net</p>
+                    </div>
+                    <button id="btn-ai-insurance" class="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-sparkles pointer-events-none"></i> ✨ AI Coverage Check
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${state.insurance.map(pol => `
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -z-0"></div>
+                            <div class="relative z-10">
+                                <i class="fa-solid ${pol.type === 'health' ? 'fa-heart-pulse text-rose-500' : 'fa-umbrella text-blue-500'} text-2xl mb-3"></i>
+                                <h3 class="font-bold text-lg text-slate-800">${pol.name}</h3>
+                                <p class="text-sm text-slate-500 capitalize mb-4">${pol.type} Insurance</p>
+                                
+                                <div class="space-y-2 mt-4 pt-4 border-t border-slate-100">
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="text-slate-400">Annual Premium:</span>
+                                        <span class="font-semibold text-slate-800">${formatMoney(pol.premium, pol.currency)}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="text-slate-400">Renewal Date:</span>
+                                        <span class="font-medium text-amber-600">${pol.renewalDate}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function generateAssetsHTML() {
+            return `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-semibold text-slate-800">Physical Assets</h3>
+                        <p class="text-sm text-slate-500">Manually Valued</p>
+                    </div>
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Asset Name</th>
+                                <th class="px-6 py-3 font-medium">Category</th>
+                                <th class="px-6 py-3 font-medium text-right">Declared Value</th>
+                                <th class="px-6 py-3 font-medium text-right">Base Value (${state.baseCurrency})</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${state.assets.map(asset => `
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-6 py-4 font-medium text-slate-800 flex items-center gap-3">
+                                        <i class="fa-solid ${asset.type === 'real_estate' ? 'fa-building text-slate-600' : 'fa-coins text-amber-500'}"></i>
+                                        ${asset.name}
+                                    </td>
+                                    <td class="px-6 py-4 text-slate-500 capitalize">${asset.type.replace('_', ' ')}</td>
+                                    <td class="px-6 py-4 text-right text-slate-700">${formatMoney(asset.manualValue, asset.currency)}</td>
+                                    <td class="px-6 py-4 text-right font-semibold text-slate-800">${formatMoney(convertCurrency(asset.manualValue, asset.currency))}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function generateSettingsHTML() {
+            return `
+                <div class="max-w-2xl bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+                    <h2 class="text-xl font-bold text-slate-800 mb-6">Application Settings</h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Base Currency</label>
+                            <select id="settings-base-currency" class="bg-white border border-slate-300 rounded-lg px-4 py-2 w-full text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer shadow-sm">
+                                <option value="SAR" ${state.baseCurrency === 'SAR' ? 'selected' : ''}>SAR</option>
+                                <option value="INR" ${state.baseCurrency === 'INR' ? 'selected' : ''}>INR</option>
+                                <option value="USD" ${state.baseCurrency === 'USD' ? 'selected' : ''}>USD</option>
+                            </select>
+                            <p class="text-xs text-slate-400 mt-1">This converts all dashboard metrics to your preferred currency.</p>
+                        </div>
+
+                        <div class="pt-6 border-t border-slate-100">
+                            <h3 class="text-md font-semibold text-slate-800 mb-2">Gemini AI Integration</h3>
+                            <p class="text-sm text-slate-500 mb-4">Provide your Gemini API key below to enable AI features. If left blank, it will try to use the environment's default connection.</p>
+                            
+                            <div class="flex items-center gap-3 mb-4">
+                                <input type="password" id="settings-api-key" placeholder="Enter Gemini API Key..." 
+                                       value="${state.apiKey ? '***********' : ''}" autocomplete="off" 
+                                       class="bg-white border border-slate-300 rounded-lg px-4 py-2 flex-1 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm pointer-events-auto">
+                                <button id="settings-btn-save-key" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm pointer-events-auto">
+                                    Save Key
+                                </button>
+                            </div>
+                            
+                            <div class="flex items-center gap-3">
+                                <div class="w-3 h-3 rounded-full ${state.apiConnected ? 'bg-green-500' : 'bg-red-500'}"></div>
+                                <span class="text-sm font-medium ${state.apiConnected ? 'text-green-700' : 'text-red-600'}">
+                                    Status: ${state.apiConnected ? 'Connected & Ready' : 'Not Connected'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-6 border-t border-slate-100">
+                            <h3 class="text-md font-semibold text-slate-800 mb-2">Data Management</h3>
+                            <button class="bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 border border-slate-200 pointer-events-none">
+                                <i class="fa-solid fa-download mr-2"></i>Export All Data (JSON)
+                            </button>
+                             <button id="btn-reset-data" class="ml-2 bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 border border-red-200">
+                                Reset App Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 4. GEMINI API INTEGRATION & LOGIC ---
+
+        const envApiKey = ""; // Environment automatically injects the correct internal key here
+        
+        async function callGeminiAPI(payload) {
+            const activeKey = state.apiKey || envApiKey;
+            // Standard public keys don't have access to the preview model, so switch to 1.5-flash if custom key is provided
+            const modelToUse = state.apiKey ? "gemini-1.5-flash" : "gemini-2.5-flash-preview-09-2025";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${activeKey}`;
+            
+            let retries = 3;
+            let delay = 1000;
+            
+            while (retries > 0) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error?.message || "API Error");
+                    return data;
+                } catch (error) {
+                    retries--;
+                    if (retries === 0) throw error;
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // Chatbot Logic
+        async function handleChatSubmit(e) {
+            e.preventDefault();
+            const inputEl = document.getElementById('chat-input');
+            const message = inputEl.value.trim();
+            if (!message) return;
+
+            addChatMessage(message, 'user');
+            inputEl.value = '';
+            inputEl.disabled = true;
+            
+            const loadingId = 'msg-loading';
+            addChatMessage('<div class="loader"></div>', 'bot', loadingId);
+
+            try {
+                const contextState = {
+                    nw: getNetWorth(),
+                    accounts: state.accounts.map(a => ({n: a.name, b: a.balance, c: a.currency})),
+                    investments: getInvestmentStats(),
+                    recentTxns: state.transactions.slice(0,10)
+                };
+
+                const payload = {
+                    systemInstruction: {
+                        parts: [{ text: "You are an expert family financial advisor built into 'Wealth OS'. Be concise, helpful, and direct. Use the user's financial data to provide specific answers. Do not use markdown for simple text, keep it readable." }]
+                    },
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: `User Context Data: ${JSON.stringify(contextState)}` },
+                            { text: `User Query: ${message}` }
+                        ]
+                    }]
+                };
+
+                const result = await callGeminiAPI(payload);
+                const replyText = result.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't process that.";
+                
+                removeElement(loadingId);
+                addChatMessage(replyText, 'bot');
+                
+            } catch (error) {
+                removeElement(loadingId);
+                addChatMessage(`Error: ${error.message}`, 'bot');
+            } finally {
+                inputEl.disabled = false;
+                inputEl.focus();
+            }
+        }
+
+        function addChatMessage(html, sender, id = null) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `flex gap-3 ${sender === 'user' ? 'flex-row-reverse' : ''}`;
+            if (id) msgDiv.id = id;
+
+            if (sender === 'bot') {
+                msgDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-700 whitespace-pre-wrap max-w-[80%]">${html}</div>
+                `;
+            } else {
+                msgDiv.innerHTML = `
+                    <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[80%]">${html}</div>
+                `;
+            }
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeElement(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // Universal Document Parsing
+        async function handleDocumentUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const chatWin = document.getElementById('chat-window');
+            if (chatWin.classList.contains('chat-hidden')) toggleChat();
+
+            addChatMessage(`Uploading ${file.name} for analysis...`, 'user');
+            
+            const statusEl = document.getElementById('upload-status');
+            statusEl.classList.remove('hidden');
+
+            try {
+                let payloadContents = [];
+
+                if (file.type.startsWith('image/')) {
+                    const base64Data = await readFileAsBase64(file);
+                    const base64Clean = base64Data.split(',')[1];
+                    payloadContents = [{
+                        role: "user",
+                        parts: [
+                            { text: "Extract any financial transactions (date, description, amount, currency) from this receipt/statement. Categorize them using: " + state.categories.join(', ') + ". Determine if it's income or expense." },
+                            { inlineData: { mimeType: file.type, data: base64Clean } }
+                        ]
+                    }];
+                } else {
+                    const textData = await file.text();
+                    payloadContents = [{
+                        role: "user",
+                        parts: [
+                            { text: "The following is raw text from a bank statement or CSV. Extract all transactions. Provide date (YYYY-MM-DD), description, amount (negative for expense, positive for income), currency, type (income/expense), and category (from list: " + state.categories.join(', ') + ").\n\nData:\n" + textData.substring(0, 10000) } 
+                        ]
+                    }];
+                }
+
+                const payload = {
+                    contents: payloadContents,
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                parsedTransactions: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            date: { type: "STRING" },
+                                            description: { type: "STRING" },
+                                            amount: { type: "NUMBER" },
+                                            currency: { type: "STRING" },
+                                            type: { type: "STRING" },
+                                            category: { type: "STRING" }
+                                        },
+                                        required: ["date", "description", "amount", "type", "category"]
+                                    }
+                                },
+                                summary: { type: "STRING" }
+                            }
+                        }
+                    }
+                };
+
+                const result = await callGeminiAPI(payload);
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (jsonText) {
+                    const parsedData = JSON.parse(jsonText);
+                    
+                    if (parsedData.parsedTransactions && parsedData.parsedTransactions.length > 0) {
+                        let count = 0;
+                        parsedData.parsedTransactions.forEach(tx => {
+                            tx.accountId = 1;
+                            tx.id = Date.now() + Math.floor(Math.random() * 1000);
+                            if(!tx.currency) tx.currency = state.baseCurrency;
+                            state.transactions.unshift(tx);
+                            count++;
+                        });
+                        
+                        addChatMessage(`Successfully extracted ${count} transactions from the document.\n\nSummary: ${parsedData.summary || 'Added to your transactions list.'}`, 'bot');
+                        
+                        if (currentPage === 'transactions' || currentPage === 'dashboard' || currentPage === 'budgets') {
+                            renderContent();
+                        }
+                    } else {
+                        addChatMessage("I analyzed the document but couldn't find structured transaction data.", 'bot');
+                    }
+                }
+
+            } catch (error) {
+                console.error(error);
+                addChatMessage(`Failed to parse document: ${error.message}`, 'bot');
+            } finally {
+                statusEl.classList.add('hidden');
+                e.target.value = ''; 
+            }
+        }
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // --- 4.5 NEW AI INSIGHT FEATURES ---
+
+        function openAIModal(title) {
+            const modal = document.getElementById('ai-modal');
+            document.getElementById('ai-modal-title').innerText = title;
+            document.getElementById('ai-modal-content').innerHTML = `
+                <div class="flex flex-col items-center justify-center py-16 space-y-4">
+                    <div class="loader" style="width: 48px; height: 48px; border-width: 4px; border-top-color: #10b981;"></div>
+                    <p class="text-emerald-600 font-medium animate-pulse text-lg mt-4">Gemini is analyzing your data...</p>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeAIModal() {
+            const modal = document.getElementById('ai-modal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        async function triggerAIInsight(title, systemPrompt, userPrompt) {
+            openAIModal(title);
+
+            try {
+                const payload = {
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ role: "user", parts: [{ text: userPrompt }] }]
+                };
+                
+                const result = await callGeminiAPI(payload);
+                const replyText = result.candidates?.[0]?.content?.parts?.[0]?.text || "No insights generated.";
+                
+                let formattedText = replyText.replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-900">$1</strong>');
+                formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                
+                document.getElementById('ai-modal-content').innerHTML = formattedText;
+            } catch (error) {
+                document.getElementById('ai-modal-content').innerHTML = `
+                    <div class="bg-red-50 text-red-700 p-6 rounded-xl border border-red-200 flex items-start gap-4">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl mt-1"></i>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">Analysis Failed</h4>
+                            <p>${error.message}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function runAIFinancialBriefing() {
+            const nw = getNetWorth();
+            const cf = getCashFlow();
+            const sysPrompt = "You are an expert wealth manager providing a quick executive summary for a family. Be encouraging but realistic. Format with clear spacing. Use bullet points for key takeaways. Keep it under 200 words.";
+            const userPrompt = `Generate a financial briefing based on this data:\nNet Worth: ${nw.net} ${state.baseCurrency}.\nMonthly Cash Flow: Income ${cf.income}, Expenses ${cf.expense}.\nAlerts: ${JSON.stringify(state.alerts)}.\nIdentify 1 positive trend and 1 area of caution based on the data provided.`;
+            triggerAIInsight("✨ Weekly Financial Briefing", sysPrompt, userPrompt);
+        }
+
+        function runAIPortfolioReview() {
+            const stats = getInvestmentStats();
+            const sysPrompt = "You are a seasoned investment advisor. Analyze the portfolio and provide a quick assessment of diversification, risk profile, and one actionable suggestion. Format nicely with HTML line breaks if needed. Keep it concise and professional.";
+            const userPrompt = `Portfolio details:\nTotal Invested: ${stats.totalInvested}.\nCurrent Value: ${stats.currentValue}.\nP&L: ${stats.plPercent}%.\nAssets: ${JSON.stringify(state.investments)}.\nBased on this specific list of assets and performance, what is your assessment?`;
+            triggerAIInsight("✨ Portfolio Strategy Review", sysPrompt, userPrompt);
+        }
+
+        function runAIBudgetOptimization() {
+            let income = 0; let needs = 0; let wants = 0; let savings = 0;
+            state.transactions.forEach(tx => {
+                const val = Math.abs(convertCurrency(tx.amount, tx.currency));
+                if (tx.type === 'income') income += val;
+                else if (['Housing', 'Utilities', 'Healthcare', 'Food', 'Insurance'].includes(tx.category)) needs += val;
+                else if (['Entertainment', 'Shopping', 'Transport'].includes(tx.category)) wants += val;
+                else if (tx.category === 'Savings' || tx.type === 'transfer') savings += val;
+            });
+            
+            const sysPrompt = "You are a pragmatic budgeting coach. The user is trying to follow the 50/30/20 rule (Needs/Wants/Savings). Review their actual spending percentages, tell them exactly where they are off track, and suggest 2 highly practical lifestyle changes or cuts based on the specific transaction categories provided. Keep it concise.";
+            const userPrompt = `Current Month Data:\nIncome: ${income}.\nNeeds: ${needs} (${((needs/income)*100).toFixed(1)}%).\nWants: ${wants} (${((wants/income)*100).toFixed(1)}%).\nSavings: ${savings} (${((savings/income)*100).toFixed(1)}%).\nRecent transactions for context: ${JSON.stringify(state.transactions.slice(0,12))}`;
+            triggerAIInsight("✨ AI Budget Optimizer", sysPrompt, userPrompt);
+        }
+
+        function runAISpendingAnalysis() {
+            const sysPrompt = "You are a forensic accountant and personal finance expert. Review the user's recent transactions. Point out any large expenses, recurring subscriptions that might be optimized, and overall spending habits. Be highly specific using the transaction descriptions and amounts provided. Use a supportive, helpful tone.";
+            const userPrompt = `Recent Transactions: ${JSON.stringify(state.transactions.slice(0, 20))}. Give me a breakdown of my spending habits based on this data.`;
+            triggerAIInsight("✨ AI Spending Analysis", sysPrompt, userPrompt);
+        }
+
+        function runAIDebtStrategy() {
+            const sysPrompt = "You are a debt management specialist. Review the user's active loans, interest rates, and outstanding balances. Recommend a payoff strategy (either Avalanche or Snowball method). Explain your reasoning clearly, and provide a 3-step action plan for them to start tackling their debt faster.";
+            const userPrompt = `Current Loans Data: ${JSON.stringify(state.loans)}. Monthly Cash Flow Savings available: ${getCashFlow().savings}. Provide a personalized debt payoff strategy.`;
+            triggerAIInsight("✨ AI Debt Payoff Strategy", sysPrompt, userPrompt);
+        }
+
+        function runAIInsuranceCheck() {
+            const nw = getNetWorth();
+            const sysPrompt = "You are a risk management expert. Review the user's net worth, liabilities, and current insurance policies. Identify any obvious coverage gaps (for example, missing life insurance if they have large liabilities, or missing health insurance). Recommend general rules of thumb for adequate coverage based on their financial profile.";
+            const userPrompt = `Financial Profile:\nNet Worth: ${nw.net}.\nTotal Liabilities: ${nw.liabilities}.\nCurrent Policies: ${JSON.stringify(state.insurance)}.\nPlease analyze if my family is adequately covered and point out any gaps.`;
+            triggerAIInsight("✨ AI Insurance Coverage Check", sysPrompt, userPrompt);
+        }
+
+        // --- GLOBAL EVENT DELEGATION (Bypasses inline CSP limits) ---
+        
+        document.addEventListener('click', (e) => {
+            // Navigation
+            const navBtn = e.target.closest('[data-navigate]');
+            if (navBtn) {
+                navigateTo(navBtn.getAttribute('data-navigate'));
+                return;
+            }
+
+            // Chat Widget
+            if (e.target.closest('#btn-toggle-chat') || e.target.closest('#btn-close-chat')) {
+                toggleChat();
+            }
+
+            // AI Modal
+            if (e.target.closest('#btn-close-modal')) closeAIModal();
+
+            // Settings & API Key
+            if (e.target.closest('#settings-btn-save-key')) {
+                const input = document.getElementById('settings-api-key');
+                if (input) {
+                    const val = input.value.trim();
+                    if (val && !val.startsWith('***')) {
+                        state.apiKey = val;
+                        state.apiConnected = true;
+                        renderContent();
+                    } else if (!val) {
+                        state.apiKey = "";
+                        state.apiConnected = false;
+                        renderContent();
+                    }
+                }
+            }
+
+            // Settings 
+            if (e.target.closest('#btn-reset-data')) {
+                localStorage.clear(); location.reload();
+            }
+
+            // AI Features
+            if (e.target.closest('#btn-ai-briefing')) runAIFinancialBriefing();
+            if (e.target.closest('#btn-ai-spending')) runAISpendingAnalysis();
+            if (e.target.closest('#btn-ai-budget')) runAIBudgetOptimization();
+            if (e.target.closest('#btn-ai-portfolio')) runAIPortfolioReview();
+            if (e.target.closest('#btn-ai-debt')) runAIDebtStrategy();
+            if (e.target.closest('#btn-ai-insurance')) runAIInsuranceCheck();
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target.id === 'base-currency' || e.target.id === 'settings-base-currency') {
+                const val = e.target.value;
+                state.baseCurrency = val;
+                const headerSelect = document.getElementById('base-currency');
+                const settingsSelect = document.getElementById('settings-base-currency');
+                if (headerSelect) headerSelect.value = val;
+                if (settingsSelect) settingsSelect.value = val;
+                renderContent(); 
+            }
+        });
+
+        document.addEventListener('focusin', (e) => {
+            if (e.target.id === 'settings-api-key' && e.target.value.startsWith('***')) {
+                e.target.value = '';
+            }
+        });
+
+        // --- 5. INITIALIZATION ---
+
+        function initApp() {
+            renderNav();
+            renderContent();
+
+            const headerSelect = document.getElementById('base-currency');
+            if(headerSelect) headerSelect.value = state.baseCurrency;
+
+            document.getElementById('chat-form').addEventListener('submit', handleChatSubmit);
+            document.getElementById('chat-doc-upload').addEventListener('change', handleDocumentUpload);
+        }
+
+        function toggleChat() {
+            const win = document.getElementById('chat-window');
+            win.classList.toggle('chat-hidden');
+            if(!win.classList.contains('chat-hidden')) {
+                document.getElementById('chat-input').focus();
+            }
+        }
+
+        // Start App
+        window.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>
